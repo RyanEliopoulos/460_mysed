@@ -1,4 +1,3 @@
-// rename replace_func to sed
 
 
 #include <stdio.h>
@@ -6,9 +5,10 @@
 #include <unistd.h>
 #include <string.h>
 
-void replace_func(char *, char *, FILE *);
+void sed(char *, char *, FILE *);
 int find(char [], char [], size_t *);
 FILE *open_file(char *);
+void replace(char [], char [], size_t);
 
 
 int main(int argc, char *argv[]) {
@@ -23,13 +23,13 @@ int main(int argc, char *argv[]) {
 
     // Replacing terms
     if (argc == 3) {  // No input files provided
-        printf("Reading from stdin\n");
-        replace_func(find_term, replace_term, stdin);
+        sed(find_term, replace_term, stdin);
     }
     else {  // Iterating through provided filepaths
         for (int i = 3; i < argc; i++) {
             FILE *file = open_file(argv[i]);   // error handling handled inside function
-            replace_func(find_term, replace_term, file);
+            sed(find_term, replace_term, file);
+            fclose(file);
         }
     }
 
@@ -49,7 +49,7 @@ FILE *open_file(char *filepath) {
 }
 
 
-void replace_func(char *find_term, char *replace_term, FILE *file) {
+void sed(char *find_term, char *replace_term, FILE *file) {
     // Finds first instance of 'find_term' for each line in the filestream 'file' 
     // and replaces it with 'replace_term'
     
@@ -61,13 +61,11 @@ void replace_func(char *find_term, char *replace_term, FILE *file) {
     size_t match_index = 0;  // Updated by find if the target string is found within the input string
 
     while ((linesize = getline(&lineptr, &n, file)) != -1) {
-        int ret = find(find_term, lineptr, &match_index);
-        if (!ret) {
-            //printf("term: %s\n", find_term); 
-            //printf("match index: %lu\n", match_index);
-            printf("%s", lineptr); 
+        int found = find(find_term, lineptr, &match_index);
+        if (found) {
+            replace(replace_term, lineptr, match_index);
         }
-        //if (ret) replace(replace_term, match_index, lineptr);
+        printf("%s", lineptr);
     }
     free(lineptr);
 }
@@ -76,27 +74,33 @@ void replace_func(char *find_term, char *replace_term, FILE *file) {
 
 int find(char find_term[], char line[], size_t *beginning_index) {
     // Attempts to find the index of string 'line' where the substring 'find_term' begins.
-    // Updates beginning_index if it exists and returns 0, otherwise returns -1
+    // Updates beginning_index if it exists and returns 1, otherwise returns 0
 
     // Establishing length for loop backstop
     size_t find_len = strlen(find_term); 
-    //printf("findlen: %lu\n", find_len);
     size_t line_len = strlen(line);
-    //printf("line_len: %lu\n", line_len);
 
     // size_t arithmetic doesn't work if the result is negative. 
     // Guard in place to compensate for this effect in the outer for loop.
-    if (find_len > line_len) return -1;   
+    if (find_len > line_len) return 0;   
 
     for (size_t i = 0; i < (line_len - find_len); i++) {  
         for (size_t j = 0; ; j++) {
             if (j >= find_len) {  
                 // Entire find_term has been found within 'line'
                 *beginning_index = i;
-                return 0;
+                return 1;
             }
             if (find_term[j] != line[i + j]) break;
         }
     }
-    return -1;
+    return 0;
+}
+
+void replace(char replace_term[], char line[], size_t index) {
+    size_t i = 0;
+    while (replace_term[i] != '\0') {
+        line[i + index] = replace_term[i];
+        i++;
+    }
 }
