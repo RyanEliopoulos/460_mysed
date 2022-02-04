@@ -8,7 +8,7 @@
 void sed(char *, char *, FILE *);
 int find(char [], char [], size_t *);
 FILE *open_file(char *);
-void replace(char [], char [], size_t);
+void replace(char [], size_t, char [], size_t);
 
 
 int main(int argc, char *argv[]) {
@@ -17,6 +17,7 @@ int main(int argc, char *argv[]) {
         printf("my-sed: find term replace term [file ...]\n");
         exit(1);
     }
+
     // At least 2 arguments provided
     char *find_term = argv[1];
     char *replace_term = argv[2];
@@ -32,7 +33,6 @@ int main(int argc, char *argv[]) {
             fclose(file);
         }
     }
-
     return 0;
 }
 
@@ -63,7 +63,10 @@ void sed(char *find_term, char *replace_term, FILE *file) {
     while ((linesize = getline(&lineptr, &n, file)) != -1) {
         int found = find(find_term, lineptr, &match_index);
         if (found) {
-            replace(replace_term, lineptr, match_index);
+            replace(replace_term, 
+                    strlen(find_term), 
+                    lineptr, 
+                    match_index);
         }
         printf("%s", lineptr);
     }
@@ -97,10 +100,25 @@ int find(char find_term[], char line[], size_t *beginning_index) {
     return 0;
 }
 
-void replace(char replace_term[], char line[], size_t index) {
+void replace(char replace_term[], size_t fterm_len, char line[], size_t index) {
+// Should only called if the target term has been found
+    
     size_t i = 0;
-    while (replace_term[i] != '\0') {
-        line[i + index] = replace_term[i];
-        i++;
+    if (replace_term[0] == '\0') {
+        // Empty string. Shifting line[] over the fterm
+        size_t line_len = strlen(line);
+        while ((i + index) < line_len) {
+            line[index + i] = line[fterm_len + i];
+            i++; 
+        }         
+        // Capping shortened string.
+        line[i + index] = '\0';
+    }
+    else {
+        // Replacement string. Replacing line[]
+        while (replace_term[i] != '\0') {
+            line[i + index] = replace_term[i];
+            i++;
+        }
     }
 }
