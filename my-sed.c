@@ -103,19 +103,22 @@ int find(char find_term[], char line[], size_t *beginning_index) {
 void replace(char replace_term[], size_t fterm_len, char line[], size_t index) {
 // Should only called if the target term has been found
     
-    size_t i = 0;
     if (replace_term[0] == '\0') {
         // Empty string. Shifting line[] over the fterm
         size_t line_len = strlen(line);
-        while ((i + index) < line_len) {
-            line[index + i] = line[fterm_len + i];
-            i++; 
+        size_t left_bound = index;
+        size_t right_bound = index + fterm_len;
+        while (right_bound <= line_len) {
+            line[left_bound] = line[right_bound];
+            left_bound++; 
+            right_bound++;
         }         
         // Capping shortened string.
-        line[i + index] = '\0';
+        line[left_bound] = '\0';
     }
     else {
         // Replacement string. Replacing line[]
+        size_t i = 0;
         while (replace_term[i] != '\0') {
             line[i + index] = replace_term[i];
             i++;
